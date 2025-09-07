@@ -11,13 +11,18 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
     origin: process.env.NODE_ENV === 'production' 
-      ? ['https://your-frontend-domain.vercel.app'] 
+      ? (process.env.CORS_ORIGINS || 'https://impostor-lol.vercel.app').split(',')
       : ['http://localhost:3000', 'http://localhost:5173'],
     methods: ['GET', 'POST']
   }
 });
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? (process.env.CORS_ORIGINS || 'https://impostor-lol.vercel.app').split(',')
+    : ['http://localhost:3000', 'http://localhost:5173'],
+  credentials: true
+}));
 app.use(express.json());
 
 const roomManager = new RoomManager();
