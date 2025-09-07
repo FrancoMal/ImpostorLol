@@ -352,6 +352,7 @@ export class RoomManager {
     if (room.gameState !== 'FINISHED') {
       return { success: false, error: 'Game is not finished' };
     }
+
     // Reset all players' eliminated status
     room.players.forEach(p => {
       p.isEliminated = false;
