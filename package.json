@@ -1,0 +1,34 @@
+{
+  "name": "lol-impostor",
+  "version": "1.0.0",
+  "description": "Impostor game with League of Legends champions",
+  "main": "index.js",
+  "scripts": {
+    "dev:backend": "cd lol-impostor-backend && npm run dev",
+    "dev:frontend": "cd lol-impostor-frontend && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:backend": "cd lol-impostor-backend && npm run build",
+    "build:frontend": "cd lol-impostor-frontend && npm run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "start:backend": "cd lol-impostor-backend && npm start",
+    "start:frontend": "cd lol-impostor-frontend && npm run preview",
+    "install:all": "npm install && cd lol-impostor-backend && npm install && cd ../lol-impostor-frontend && npm install",
+    "deploy:frontend": "cd lol-impostor-frontend && vercel --prod",
+    "deploy:check": "npm run build && echo '✅ Build successful! Ready for deployment'",
+    "prod:test": "npm run build && concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "clean": "cd lol-impostor-backend && npm run clean && cd ../lol-impostor-frontend && rm -rf dist"
+  },
+  "keywords": [
+    "lol",
+    "impostor",
+    "game",
+    "multiplayer",
+    "socket.io",
+    "react"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

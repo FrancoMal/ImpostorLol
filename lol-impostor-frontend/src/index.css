@@ -1,0 +1,136 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark light;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
+  width: 100%;
+}
+
+/* Custom styles for the game */
+.min-vh-100 {
+  min-height: 100vh;
+}
+
+/* Toast customization */
+.toast {
+  --bs-toast-bg: var(--bs-danger);
+}
+
+/* Scrollbar customization for chat */
+.overflow-auto::-webkit-scrollbar {
+  width: 8px;
+}
+
+.overflow-auto::-webkit-scrollbar-track {
+  background: #2d3748;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 4px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb:hover {
+  background: #718096;
+}
+
+/* Champion image hover effect */
+.champion-image {
+  transition: transform 0.2s ease;
+}
+
+.champion-image:hover {
+  transform: scale(1.05);
+}
+
+/* Button animations */
+.btn {
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Loading spinner for connection */
+.spinner-border {
+  animation: spinner-border 0.75s linear infinite;
+}
+
+@keyframes spinner-border {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Dark theme adjustments for Bootstrap */
+.bg-dark {
+  background-color: #1a1a1a !important;
+}
+
+.bg-secondary {
+  background-color: #2d3748 !important;
+}
+
+.text-light {
+  color: #f7fafc !important;
+}
+
+.text-muted {
+  color: #a0aec0 !important;
+}
+
+.border-secondary {
+  border-color: #4a5568 !important;
+}
+
+/* Custom card styling */
+.card {
+  border: 1px solid #4a5568;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Form controls in dark theme */
+.form-control,
+.form-select {
+  background-color: #2d3748;
+  border-color: #4a5568;
+  color: #f7fafc;
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: #2d3748;
+  border-color: #63b3ed;
+  box-shadow: 0 0 0 0.2rem rgba(99, 179, 237, 0.25);
+  color: #f7fafc;
+}
+
+.form-control::placeholder {
+  color: #a0aec0;
+}
+
+/* Badge improvements */
+.badge {
+  font-size: 0.8em;
+  font-weight: 500;
+}
