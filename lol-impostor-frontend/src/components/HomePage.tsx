@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { RoomSettings } from '../types';
 import { PROFILE_ICONS, getProfileIconUrl, getRandomProfileIcon } from '../utils/profileIcons';
+import { useTheme } from '../contexts/ThemeContext';
+import { ThemeToggle } from './ThemeToggle';
 
 interface HomePageProps {
   onCreateRoom: (nickname: string, profileIcon: string, settings: Partial<RoomSettings>) => void;
@@ -15,6 +17,7 @@ export const HomePage = ({ onCreateRoom, onJoinRoom, connected }: HomePageProps)
   const [roomId, setRoomId] = useState('');
   const [selectedIcon, setSelectedIcon] = useState(getRandomProfileIcon());
   const [showIconSelector, setShowIconSelector] = useState(false);
+  const { isLight } = useTheme();
   const [settings, setSettings] = useState<Partial<RoomSettings>>({
     maxPlayers: 6,
     impostorCount: 1,
@@ -50,14 +53,18 @@ export const HomePage = ({ onCreateRoom, onJoinRoom, connected }: HomePageProps)
   }
 
   return (
-    <div className="container-fluid min-vh-100 d-flex align-items-center justify-content-center bg-dark">
+    <div className={`container-fluid min-vh-100 d-flex align-items-center justify-content-center ${isLight ? 'bg-light text-dark' : 'bg-dark text-light'}`}>
       <div className="row w-100">
         <div className="col-md-10 col-lg-8 col-xl-6 mx-auto">
+          {/* Theme Toggle */}
+          <div className="d-flex justify-content-end mb-3">
+            <ThemeToggle />
+          </div>
           <div className="text-center mb-4">
             <h1 className="display-4 text-warning mb-3">
               <i className="bi bi-lightning-fill"></i> LoL Impostor
             </h1>
-            <div className="card bg-secondary mb-4">
+            <div className={`card ${isLight ? 'bg-white border' : 'bg-secondary'} mb-4`}>
               <div className="card-body">
                 <h5 className="text-warning mb-3">
                   <i className="bi bi-info-circle"></i> Cómo Jugar
@@ -65,14 +72,14 @@ export const HomePage = ({ onCreateRoom, onJoinRoom, connected }: HomePageProps)
                 <div className="text-start">
                   <div className="row g-4">
                     <div className="col-md-6">
-                      <h6 className="text-light">📋 Objetivo</h6>
-                      <p className="text-light small mb-3">
+                      <h6 className={isLight ? 'text-dark' : 'text-light'}>📋 Objetivo</h6>
+                      <p className={`${isLight ? 'text-dark' : 'text-light'} small mb-3`}>
                         <strong className="text-success">Inocentes:</strong> Identifica y vota para expulsar a todos los impostores<br/>
                         <strong className="text-danger">Impostores:</strong> Permanece oculto y evita ser descubierto
                       </p>
 
-                      <h6 className="text-light">🎯 Mecánica</h6>
-                      <div className="text-light small">
+                      <h6 className={isLight ? 'text-dark' : 'text-light'}>🎯 Mecánica</h6>
+                      <div className={`${isLight ? 'text-dark' : 'text-light'} small`}>
                         <p className="mb-1">• Cada inocente recibe un <strong>campeón secreto</strong> de League of Legends</p>
                         <p className="mb-1">• Los impostores <strong>no saben qué campeón tienen</strong></p>
                         <p className="mb-1">• Durante la discusión, da <strong>pistas sobre tu campeón</strong></p>
@@ -80,14 +87,14 @@ export const HomePage = ({ onCreateRoom, onJoinRoom, connected }: HomePageProps)
                       </div>
                     </div>
                     <div className="col-md-6">
-                      <h6 className="text-light">🏆 Victoria</h6>
-                      <p className="text-light small mb-3">
+                      <h6 className={isLight ? 'text-dark' : 'text-light'}>🏆 Victoria</h6>
+                      <p className={`${isLight ? 'text-dark' : 'text-light'} small mb-3`}>
                         <strong className="text-success">Inocentes ganan:</strong> Eliminan a todos los impostores<br/>
                         <strong className="text-danger">Impostores ganan:</strong> Igualan o superan en número a los inocentes
                       </p>
 
-                      <h6 className="text-light">⚡ Consejos</h6>
-                      <div className="text-light small">
+                      <h6 className={isLight ? 'text-dark' : 'text-light'}>⚡ Consejos</h6>
+                      <div className={`${isLight ? 'text-dark' : 'text-light'} small`}>
                         <p className="mb-1">• Da pistas <strong>específicas</strong> pero no obvias sobre tu campeón</p>
                         <p className="mb-1">• Observa quién da pistas <strong>vagas o incorrectas</strong></p>
                         <p className="mb-0">• Los eliminados se convierten en <strong>espectadores</strong></p>
@@ -99,7 +106,7 @@ export const HomePage = ({ onCreateRoom, onJoinRoom, connected }: HomePageProps)
             </div>
           </div>
 
-          <div className="card bg-secondary">
+          <div className={`card ${isLight ? 'bg-white border' : 'bg-secondary'}`}>
             <div className="card-body">
               {!showCreateRoom && !showJoinRoom && (
                 <div className="d-grid gap-3">
@@ -316,11 +323,11 @@ export const HomePage = ({ onCreateRoom, onJoinRoom, connected }: HomePageProps)
           </div>
 
           {/* Footer */}
-          <footer className="text-center mt-4 py-3 border-top border-secondary">
+          <footer className={`text-center mt-4 py-3 border-top ${isLight ? 'border-secondary' : 'border-secondary'}`}>
             <div className="row">
               <div className="col-md-6 text-md-start text-center mb-2 mb-md-0">
                 <small className="text-muted">
-                  <i className="bi bi-tag"></i> Versión 1.0
+                  <i className="bi bi-tag"></i> Versión 1.1
                 </small>
               </div>
               <div className="col-md-6 text-md-end text-center">

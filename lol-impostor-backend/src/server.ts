@@ -292,6 +292,32 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Reset game (host only)
+  socket.on('reset-game', () => {
+    try {
+      if (!currentRoomId) {
+        socket.emit('error', 'Not in a room');
+        return;
+      }
+
+      const result = roomManager.resetGame(currentRoomId, playerId);
+      if (!result.success) {
+        socket.emit('error', result.error || 'Failed to reset game');
+        return;
+      }
+
+      const room = roomManager.getRoom(currentRoomId);
+      if (room) {
+        io.to(currentRoomId).emit('game-reset');
+        io.to(currentRoomId).emit('room-updated', room);
+        console.log(`Game reset in room ${currentRoomId}`);
+      }
+    } catch (error) {
+      console.error('Error resetting game:', error);
+      socket.emit('error', 'Failed to reset game');
+    }
+  });
+
   // Handle disconnect
   socket.on('disconnect', () => {
     console.log(`Player disconnected: ${socket.id}`);

@@ -343,6 +343,32 @@ export class RoomManager {
     return deletedCount;
   }
 
+  resetGame(roomId: string, hostId: string): { success: boolean; error?: string } {
+    const room = this.rooms.get(roomId);
+    if (!room || room.hostId !== hostId) {
+      return { success: false, error: 'Room not found or not host' };
+    }
+
+    if (room.gameState !== 'FINISHED') {
+      return { success: false, error: 'Game is not finished' };
+    }
+    // Reset all players' eliminated status
+    room.players.forEach(p => {
+      p.isEliminated = false;
+      p.isImpostor = false;
+    });
+
+    // Reset game state
+    room.gameState = 'WAITING';
+    room.champion = undefined;
+    room.votes = [];
+    room.votingRound = 0;
+    room.messages = [];
+    room.lastActivity = new Date();
+
+    return { success: true };
+  }
+
   private generateRoomId(): string {
     // Generate a 6-character room ID
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';

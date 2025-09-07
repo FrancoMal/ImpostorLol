@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import type { Room, GameData, Message } from '../types';
 import { getChampionImageUrl, FALLBACK_CHAMPION_IMAGE } from '../utils/champions';
 import { getProfileIconUrl } from '../utils/profileIcons';
+import { useTheme } from '../contexts/ThemeContext';
+import { ThemeToggle } from './ThemeToggle';
 
 interface GameRoomProps {
   room: Room;
@@ -14,6 +16,7 @@ interface GameRoomProps {
   onCastVote: (targetId: string) => void;
   onStartVoting: () => void;
   onKickPlayer: (playerId: string) => void;
+  onResetGame: () => void;
   currentPlayerId: string;
 }
 
@@ -28,12 +31,17 @@ export const GameRoom = ({
   onCastVote,
   onStartVoting,
   onKickPlayer,
+  onResetGame,
   currentPlayerId
 }: GameRoomProps) => {
   const [message, setMessage] = useState('');
   const [selectedVote, setSelectedVote] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState(room.settings);
+  const [showVictoryModal, setShowVictoryModal] = useState(false);
+  const [victoryData, setVictoryData] = useState<{ winner: string; reason: string } | null>(null);
+  const [showNewGameModal, setShowNewGameModal] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const currentPlayer = room.players.find(p => p.id === currentPlayerId);
@@ -41,10 +49,26 @@ export const GameRoom = ({
   const connectedPlayers = room.players.filter(p => p.isConnected);
   const activePlayers = connectedPlayers.filter(p => !p.isEliminated);
   const isSpectator = currentPlayer?.isEliminated || false;
+  const { isLight } = useTheme();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Handle game end
+  useEffect(() => {
+    if (room.gameState === 'FINISHED') {
+      // Simulate game-ended event data
+      const remainingImpostors = activePlayers.filter(p => p.isImpostor);
+      const winner = remainingImpostors.length === 0 ? 'innocents' : 'impostors';
+      const reason = remainingImpostors.length === 0 
+        ? 'Todos los impostores fueron eliminados' 
+        : 'Los impostores igualan o superan en número a los inocentes';
+      
+      setVictoryData({ winner, reason });
+      setShowVictoryModal(true);
+    }
+  }, [room.gameState, activePlayers]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +86,40 @@ export const GameRoom = ({
   const handleUpdateSettings = () => {
     onUpdateSettings(settings);
     setShowSettings(false);
+  };
+
+  const handleNewGame = () => {
+    setShowNewGameModal(true);
+  };
+
+  const confirmNewGame = () => {
+    setShowNewGameModal(false);
+    setCountdown(3);
+    
+    // Start countdown
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          // Reset game states
+          setShowVictoryModal(false);
+          setVictoryData(null);
+          setSelectedVote('');
+          // Reset and start new game
+          onResetGame();
+          // After a small delay, start the new game
+          setTimeout(() => {
+            onStartGame();
+          }, 500);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const cancelNewGame = () => {
+    setShowNewGameModal(false);
   };
 
   const getGameStateText = () => {
@@ -82,19 +140,22 @@ export const GameRoom = ({
   const canChat = room.gameState === 'DISCUSSION' && !isSpectator;
 
   return (
-    <div className="container-fluid min-vh-100 bg-dark text-light">
+    <div className={`container-fluid min-vh-100 ${isLight ? 'bg-light text-dark' : 'bg-dark text-light'}`}>
       {/* Header */}
-      <div className="row border-bottom border-secondary py-3">
-        <div className="col-md-6">
+      <div className={`row ${isLight ? 'border-bottom border-dark' : 'border-bottom border-secondary'} py-3`}>
+        <div className="col-md-4">
           <h4 className="mb-0">
             <i className="bi bi-door-open me-2"></i>
             Sala: <span className="text-warning">{room.id}</span>
           </h4>
           <small className="text-muted">{getGameStateText()}</small>
         </div>
-        <div className="col-md-6 text-end">
+        <div className="col-md-4 text-center">
+          <ThemeToggle />
+        </div>
+        <div className="col-md-4 text-end">
           {/* Debug Info - Remove in production */}
-          <small className="text-muted me-3">
+          <small className="text-muted me-3 d-none d-lg-inline">
             Debug: PlayerId={currentPlayerId?.substring(0,8)}... | GameState={room.gameState} | Messages={messages.length}
           </small>
           <div className="btn-group">
@@ -123,7 +184,7 @@ export const GameRoom = ({
       {showSettings && (
         <div className="row mt-3">
           <div className="col-12">
-            <div className="card bg-secondary">
+            <div className={`card ${isLight ? 'bg-white border' : 'bg-secondary'}`}>
               <div className="card-body">
                 <h6>Configuración de Sala</h6>
                 <div className="row">
@@ -197,7 +258,7 @@ export const GameRoom = ({
 
           {/* Champion Info */}
           {gameData && !isSpectator && (
-            <div className="card bg-secondary mb-3">
+            <div className={`card ${isLight ? 'bg-white border' : 'bg-secondary'} mb-3`}>
               <div className="card-body text-center">
                 {gameData.isImpostor ? (
                   <div>
@@ -226,7 +287,7 @@ export const GameRoom = ({
           )}
 
           {/* Players List */}
-          <div className="card bg-secondary">
+          <div className={`card ${isLight ? 'bg-white border' : 'bg-secondary'}`}>
             <div className="card-header">
               <h6 className="mb-0">
                 Jugadores ({connectedPlayers.length}/{room.settings.maxPlayers})
@@ -287,7 +348,7 @@ export const GameRoom = ({
 
         {/* Center Panel - Chat */}
         <div className="col-md-5">
-          <div className="card bg-secondary h-100">
+          <div className={`card ${isLight ? 'bg-white border' : 'bg-secondary'} h-100`}>
             <div className="card-header">
               <h6 className="mb-0">Chat</h6>
             </div>
@@ -340,7 +401,7 @@ export const GameRoom = ({
         {/* Right Panel - Voting */}
         <div className="col-md-3">
           {canVote && (
-            <div className="card bg-secondary">
+            <div className={`card ${isLight ? 'bg-white border' : 'bg-secondary'}`}>
               <div className="card-header">
                 <h6 className="mb-0">Votar para Expulsar</h6>
               </div>
@@ -381,12 +442,136 @@ export const GameRoom = ({
         </div>
       </div>
 
+      {/* Victory Modal */}
+      {showVictoryModal && victoryData && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className={`modal-content ${isLight ? 'bg-white' : 'bg-dark'}`}>
+              <div className={`modal-header ${isLight ? 'border-secondary' : 'border-secondary'}`}>
+                <h5 className="modal-title text-warning">
+                  <i className="bi bi-trophy-fill"></i> ¡Partida Terminada!
+                </h5>
+              </div>
+              <div className="modal-body text-center">
+                <div className={`alert ${victoryData.winner === 'innocents' ? 'alert-success' : 'alert-danger'} mb-4`}>
+                  <h4 className="mb-2">
+                    {victoryData.winner === 'innocents' ? (
+                      <>
+                        <i className="bi bi-shield-check"></i> ¡Inocentes Ganan!
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-exclamation-triangle-fill"></i> ¡Impostores Ganan!
+                      </>
+                    )}
+                  </h4>
+                  <p className="mb-0">{victoryData.reason}</p>
+                </div>
+
+                <div className="row text-center mb-4">
+                  <div className="col-md-6">
+                    <h6 className="text-success">Inocentes</h6>
+                    {connectedPlayers
+                      .filter(p => !p.isImpostor)
+                      .map(player => (
+                        <div key={player.id} className="d-flex align-items-center justify-content-start mb-1">
+                          <img 
+                            src={getProfileIconUrl(player.profileIcon || '0.png')}
+                            alt={player.nickname}
+                            className="rounded-circle me-2"
+                            style={{ width: '24px', height: '24px', objectFit: 'cover' }}
+                          />
+                          <span className={`badge ${player.isEliminated ? 'bg-danger' : 'bg-success'}`}>
+                            {player.nickname}
+                            {player.isEliminated && ' (Eliminado)'}
+                          </span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                  <div className="col-md-6">
+                    <h6 className="text-danger">Impostores</h6>
+                    {connectedPlayers
+                      .filter(p => p.isImpostor)
+                      .map(player => (
+                        <div key={player.id} className="d-flex align-items-center justify-content-start mb-1">
+                          <img 
+                            src={getProfileIconUrl(player.profileIcon || '0.png')}
+                            alt={player.nickname}
+                            className="rounded-circle me-2"
+                            style={{ width: '24px', height: '24px', objectFit: 'cover' }}
+                          />
+                          <span className={`badge ${player.isEliminated ? 'bg-secondary' : 'bg-danger'}`}>
+                            {player.nickname}
+                            {player.isEliminated && ' (Eliminado)'}
+                          </span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+
+                {isHost && (
+                  <button 
+                    className="btn btn-primary"
+                    onClick={handleNewGame}
+                  >
+                    <i className="bi bi-arrow-clockwise"></i> Nueva Partida
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Game Confirmation Modal */}
+      {showNewGameModal && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className={`modal-content ${isLight ? 'bg-white' : 'bg-dark'}`}>
+              <div className={`modal-header ${isLight ? 'border-secondary' : 'border-secondary'}`}>
+                <h5 className="modal-title text-warning">
+                  <i className="bi bi-arrow-clockwise"></i> Nueva Partida
+                </h5>
+              </div>
+              <div className="modal-body text-center">
+                <p className={isLight ? 'text-dark' : 'text-light'}>¿Empezar una nueva partida?</p>
+                <p className="text-muted">Se asignará un nuevo campeón e impostores aleatorios</p>
+              </div>
+              <div className={`modal-footer ${isLight ? 'border-secondary' : 'border-secondary'}`}>
+                <button className="btn btn-secondary" onClick={cancelNewGame}>
+                  Cancelar
+                </button>
+                <button className="btn btn-primary" onClick={confirmNewGame}>
+                  <i className="bi bi-play-fill"></i> Empezar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Countdown Modal */}
+      {countdown > 0 && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className={`modal-content ${isLight ? 'bg-white' : 'bg-dark'}`}>
+              <div className="modal-body text-center py-5">
+                <h1 className="display-1 text-warning mb-3">{countdown}</h1>
+                <p className={isLight ? 'text-dark' : 'text-light'}>Empezando nueva partida...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
-      <footer className="container-fluid border-top border-secondary mt-4 py-3">
+      <footer className={`container-fluid border-top ${isLight ? 'border-dark' : 'border-secondary'} mt-4 py-3`}>
         <div className="row text-center">
           <div className="col-md-6 text-md-start mb-2 mb-md-0">
             <small className="text-muted">
-              <i className="bi bi-tag"></i> LoL Impostor v1.0
+              <i className="bi bi-tag"></i> LoL Impostor v1.1
             </small>
           </div>
           <div className="col-md-6 text-md-end">

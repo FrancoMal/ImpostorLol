@@ -148,6 +148,12 @@ export const useSocket = () => {
     }
   };
 
+  const resetGame = () => {
+    if (socketRef.current) {
+      socketRef.current.emit('reset-game');
+    }
+  };
+
   const clearError = () => {
     setError(null);
   };
@@ -168,6 +174,7 @@ export const useSocket = () => {
     castVote,
     startVoting,
     kickPlayer,
+    resetGame,
     clearError
   };
 };
