@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import type { RoomSettings } from '../types';
+import { PROFILE_ICONS, getProfileIconUrl, getRandomProfileIcon } from '../utils/profileIcons';
 
 interface HomePageProps {
-  onCreateRoom: (nickname: string, settings: Partial<RoomSettings>) => void;
-  onJoinRoom: (roomId: string, nickname: string) => void;
+  onCreateRoom: (nickname: string, profileIcon: string, settings: Partial<RoomSettings>) => void;
+  onJoinRoom: (roomId: string, nickname: string, profileIcon: string) => void;
   connected: boolean;
 }
 
@@ -12,6 +13,8 @@ export const HomePage = ({ onCreateRoom, onJoinRoom, connected }: HomePageProps)
   const [showJoinRoom, setShowJoinRoom] = useState(false);
   const [nickname, setNickname] = useState('');
   const [roomId, setRoomId] = useState('');
+  const [selectedIcon, setSelectedIcon] = useState(getRandomProfileIcon());
+  const [showIconSelector, setShowIconSelector] = useState(false);
   const [settings, setSettings] = useState<Partial<RoomSettings>>({
     maxPlayers: 6,
     impostorCount: 1,
@@ -22,14 +25,14 @@ export const HomePage = ({ onCreateRoom, onJoinRoom, connected }: HomePageProps)
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
     if (nickname.trim()) {
-      onCreateRoom(nickname.trim(), settings);
+      onCreateRoom(nickname.trim(), selectedIcon, settings);
     }
   };
 
   const handleJoinRoom = (e: React.FormEvent) => {
     e.preventDefault();
     if (nickname.trim() && roomId.trim()) {
-      onJoinRoom(roomId.trim().toUpperCase(), nickname.trim());
+      onJoinRoom(roomId.trim().toUpperCase(), nickname.trim(), selectedIcon);
     }
   };
 
@@ -49,14 +52,51 @@ export const HomePage = ({ onCreateRoom, onJoinRoom, connected }: HomePageProps)
   return (
     <div className="container-fluid min-vh-100 d-flex align-items-center justify-content-center bg-dark">
       <div className="row w-100">
-        <div className="col-md-8 col-lg-6 col-xl-4 mx-auto">
-          <div className="text-center mb-5">
+        <div className="col-md-10 col-lg-8 col-xl-6 mx-auto">
+          <div className="text-center mb-4">
             <h1 className="display-4 text-warning mb-3">
               <i className="bi bi-lightning-fill"></i> LoL Impostor
             </h1>
-            <p className="lead text-light">
-              ¿Puedes descubrir al impostor antes de que te descubran?
-            </p>
+            <div className="card bg-secondary mb-4">
+              <div className="card-body">
+                <h5 className="text-warning mb-3">
+                  <i className="bi bi-info-circle"></i> Cómo Jugar
+                </h5>
+                <div className="text-start">
+                  <div className="row g-4">
+                    <div className="col-md-6">
+                      <h6 className="text-light">📋 Objetivo</h6>
+                      <p className="text-light small mb-3">
+                        <strong className="text-success">Inocentes:</strong> Identifica y vota para expulsar a todos los impostores<br/>
+                        <strong className="text-danger">Impostores:</strong> Permanece oculto y evita ser descubierto
+                      </p>
+
+                      <h6 className="text-light">🎯 Mecánica</h6>
+                      <div className="text-light small">
+                        <p className="mb-1">• Cada inocente recibe un <strong>campeón secreto</strong> de League of Legends</p>
+                        <p className="mb-1">• Los impostores <strong>no saben qué campeón tienen</strong></p>
+                        <p className="mb-1">• Durante la discusión, da <strong>pistas sobre tu campeón</strong></p>
+                        <p className="mb-0">• Vota para expulsar a quien creas que es impostor</p>
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <h6 className="text-light">🏆 Victoria</h6>
+                      <p className="text-light small mb-3">
+                        <strong className="text-success">Inocentes ganan:</strong> Eliminan a todos los impostores<br/>
+                        <strong className="text-danger">Impostores ganan:</strong> Igualan o superan en número a los inocentes
+                      </p>
+
+                      <h6 className="text-light">⚡ Consejos</h6>
+                      <div className="text-light small">
+                        <p className="mb-1">• Da pistas <strong>específicas</strong> pero no obvias sobre tu campeón</p>
+                        <p className="mb-1">• Observa quién da pistas <strong>vagas o incorrectas</strong></p>
+                        <p className="mb-0">• Los eliminados se convierten en <strong>espectadores</strong></p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="card bg-secondary">
@@ -95,6 +135,46 @@ export const HomePage = ({ onCreateRoom, onJoinRoom, connected }: HomePageProps)
                       maxLength={20}
                       required
                     />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label text-light">Imagen de Perfil</label>
+                    <div className="d-flex align-items-center">
+                      <img 
+                        src={getProfileIconUrl(selectedIcon)}
+                        alt="Profile"
+                        className="rounded-circle me-3"
+                        style={{ width: '48px', height: '48px', objectFit: 'cover' }}
+                      />
+                      <button 
+                        type="button"
+                        className="btn btn-outline-light btn-sm"
+                        onClick={() => setShowIconSelector(!showIconSelector)}
+                      >
+                        <i className="bi bi-image"></i> Cambiar
+                      </button>
+                    </div>
+                    
+                    {showIconSelector && (
+                      <div className="mt-3">
+                        <div className="row g-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                          {PROFILE_ICONS.map((icon) => (
+                            <div key={icon} className="col-3 col-sm-2">
+                              <img
+                                src={getProfileIconUrl(icon)}
+                                alt={`Icon ${icon}`}
+                                className={`img-fluid rounded-circle border cursor-pointer ${selectedIcon === icon ? 'border-primary border-3' : 'border-secondary'}`}
+                                style={{ width: '48px', height: '48px', objectFit: 'cover', cursor: 'pointer' }}
+                                onClick={() => {
+                                  setSelectedIcon(icon);
+                                  setShowIconSelector(false);
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="row mb-3">
@@ -172,6 +252,46 @@ export const HomePage = ({ onCreateRoom, onJoinRoom, connected }: HomePageProps)
                     />
                   </div>
 
+                  <div className="mb-3">
+                    <label className="form-label text-light">Imagen de Perfil</label>
+                    <div className="d-flex align-items-center">
+                      <img 
+                        src={getProfileIconUrl(selectedIcon)}
+                        alt="Profile"
+                        className="rounded-circle me-3"
+                        style={{ width: '48px', height: '48px', objectFit: 'cover' }}
+                      />
+                      <button 
+                        type="button"
+                        className="btn btn-outline-light btn-sm"
+                        onClick={() => setShowIconSelector(!showIconSelector)}
+                      >
+                        <i className="bi bi-image"></i> Cambiar
+                      </button>
+                    </div>
+                    
+                    {showIconSelector && (
+                      <div className="mt-3">
+                        <div className="row g-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                          {PROFILE_ICONS.map((icon) => (
+                            <div key={icon} className="col-3 col-sm-2">
+                              <img
+                                src={getProfileIconUrl(icon)}
+                                alt={`Icon ${icon}`}
+                                className={`img-fluid rounded-circle border cursor-pointer ${selectedIcon === icon ? 'border-primary border-3' : 'border-secondary'}`}
+                                style={{ width: '48px', height: '48px', objectFit: 'cover', cursor: 'pointer' }}
+                                onClick={() => {
+                                  setSelectedIcon(icon);
+                                  setShowIconSelector(false);
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="d-grid gap-2">
                     <button type="submit" className="btn btn-success">
                       Unirse
@@ -191,9 +311,33 @@ export const HomePage = ({ onCreateRoom, onJoinRoom, connected }: HomePageProps)
 
           <div className="text-center mt-4">
             <small className="text-muted">
-              Juego inspirado en Among Us con campeones de League of Legends
+              <i className="bi bi-controller"></i> ¡Buena suerte detective!
             </small>
           </div>
+
+          {/* Footer */}
+          <footer className="text-center mt-4 py-3 border-top border-secondary">
+            <div className="row">
+              <div className="col-md-6 text-md-start text-center mb-2 mb-md-0">
+                <small className="text-muted">
+                  <i className="bi bi-tag"></i> Versión 1.0
+                </small>
+              </div>
+              <div className="col-md-6 text-md-end text-center">
+                <small className="text-muted">
+                  Desarrollado por{' '}
+                  <a 
+                    href="https://github.com/FrancoMal" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-decoration-none text-warning"
+                  >
+                    <i className="bi bi-github"></i> FrancoMal
+                  </a>
+                </small>
+              </div>
+            </div>
+          </footer>
         </div>
       </div>
     </div>

@@ -5,7 +5,7 @@ import { getRandomChampion } from './champions';
 export class RoomManager {
   private rooms: Map<string, Room> = new Map();
 
-  createRoom(hostId: string, hostNickname: string, settings: Partial<RoomSettings>): Room {
+  createRoom(hostId: string, hostNickname: string, profileIcon: string, settings: Partial<RoomSettings>): Room {
     const roomId = this.generateRoomId();
     
     const defaultSettings: RoomSettings = {
@@ -20,9 +20,11 @@ export class RoomManager {
     const host: Player = {
       id: hostId,
       nickname: hostNickname,
+      profileIcon: profileIcon,
       isHost: true,
       isImpostor: false,
       isConnected: true,
+      isEliminated: false,
       joinedAt: new Date(),
       lastSeen: new Date()
     };
@@ -44,7 +46,7 @@ export class RoomManager {
     return room;
   }
 
-  joinRoom(roomId: string, playerId: string, nickname: string): Room | null {
+  joinRoom(roomId: string, playerId: string, nickname: string, profileIcon: string): Room | null {
     const room = this.rooms.get(roomId);
     if (!room) return null;
 
@@ -71,9 +73,11 @@ export class RoomManager {
     const newPlayer: Player = {
       id: playerId,
       nickname,
+      profileIcon: profileIcon,
       isHost: false,
       isImpostor: false,
       isConnected: true,
+      isEliminated: false,
       joinedAt: new Date(),
       lastSeen: new Date()
     };
@@ -146,7 +150,7 @@ export class RoomManager {
       return { success: false, error: 'Game already in progress' };
     }
 
-    const activePlayers = room.players.filter(p => p.isConnected);
+    const activePlayers = room.players.filter(p => p.isConnected && !p.isEliminated);
     if (activePlayers.length < 3) {
       return { success: false, error: 'Need at least 3 players to start' };
     }
@@ -167,8 +171,11 @@ export class RoomManager {
     const shuffledPlayers = [...activePlayers].sort(() => Math.random() - 0.5);
     const impostors = shuffledPlayers.slice(0, room.settings.impostorCount);
     
-    // Reset impostor status for all players
-    room.players.forEach(p => p.isImpostor = false);
+    // Reset impostor status and eliminated status for all players
+    room.players.forEach(p => {
+      p.isImpostor = false;
+      p.isEliminated = false;
+    });
     impostors.forEach(p => p.isImpostor = true);
 
     room.gameState = 'DISCUSSION';
@@ -219,9 +226,12 @@ export class RoomManager {
     const room = this.rooms.get(roomId);
     if (!room || room.gameState !== 'VOTING') return false;
 
-    const voter = room.players.find(p => p.id === playerId && p.isConnected);
-    const target = room.players.find(p => p.id === targetId && p.isConnected);
+    const voter = room.players.find(p => p.id === playerId && p.isConnected && !p.isEliminated);
+    const target = room.players.find(p => p.id === targetId && p.isConnected && !p.isEliminated);
     if (!voter || !target) return false;
+    
+    // Prevent self-voting
+    if (playerId === targetId) return false;
 
     // Remove existing vote from this player for this round
     room.votes = room.votes.filter(v => !(v.playerId === playerId && v.round === room.votingRound));
@@ -244,7 +254,7 @@ export class RoomManager {
     if (!room || room.gameState !== 'VOTING') return null;
 
     const currentVotes = room.votes.filter(v => v.round === room.votingRound);
-    const activePlayers = room.players.filter(p => p.isConnected);
+    const activePlayers = room.players.filter(p => p.isConnected && !p.isEliminated);
 
     // Count votes
     const voteCounts: { [playerId: string]: number } = {};
@@ -283,11 +293,11 @@ export class RoomManager {
       if (eliminatedPlayer) {
         result.eliminated = eliminatedPlayer.nickname;
         
-        // Remove eliminated player
-        room.players = room.players.filter(p => p.id !== eliminatedPlayer.id);
+        // Mark player as eliminated (spectator mode) instead of removing
+        eliminatedPlayer.isEliminated = true;
 
-        // Check win conditions
-        const remainingPlayers = room.players.filter(p => p.isConnected);
+        // Check win conditions (only count non-eliminated players)
+        const remainingPlayers = room.players.filter(p => p.isConnected && !p.isEliminated);
         const remainingImpostors = remainingPlayers.filter(p => p.isImpostor);
         
         if (remainingImpostors.length === 0) {

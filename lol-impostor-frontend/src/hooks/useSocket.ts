@@ -10,6 +10,7 @@ export const useSocket = () => {
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [socketId, setSocketId] = useState<string>('');
 
   useEffect(() => {
     // Connect to server
@@ -24,8 +25,9 @@ export const useSocket = () => {
 
     // Connection events
     socket.on('connect', () => {
-      console.log('Connected to server');
+      console.log('Connected to server with ID:', socket.id);
       setConnected(true);
+      setSocketId(socket.id || '');
       setError(null);
     });
 
@@ -89,15 +91,15 @@ export const useSocket = () => {
   }, []);
 
   // Socket methods
-  const createRoom = (nickname: string, settings: Partial<RoomSettings> = {}) => {
+  const createRoom = (nickname: string, profileIcon: string, settings: Partial<RoomSettings> = {}) => {
     if (socketRef.current) {
-      socketRef.current.emit('create-room', { ...settings, nickname });
+      socketRef.current.emit('create-room', { ...settings, nickname, profileIcon });
     }
   };
 
-  const joinRoom = (roomId: string, nickname: string) => {
+  const joinRoom = (roomId: string, nickname: string, profileIcon: string) => {
     if (socketRef.current) {
-      socketRef.current.emit('join-room', { roomId, nickname });
+      socketRef.current.emit('join-room', { roomId, nickname, profileIcon });
     }
   };
 
@@ -156,6 +158,7 @@ export const useSocket = () => {
     gameData,
     messages,
     error,
+    socketId,
     createRoom,
     joinRoom,
     leaveRoom,

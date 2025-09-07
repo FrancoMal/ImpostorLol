@@ -6,7 +6,6 @@ import type { RoomSettings } from './types';
 
 function App() {
   const [currentView, setCurrentView] = useState<'home' | 'room'>('home');
-  const [currentPlayerId, setCurrentPlayerId] = useState<string>('');
   
   const {
     connected,
@@ -14,6 +13,7 @@ function App() {
     gameData,
     messages,
     error,
+    socketId,
     createRoom,
     joinRoom,
     leaveRoom,
@@ -26,14 +26,6 @@ function App() {
     clearError
   } = useSocket();
 
-  // Update current player ID when connected
-  useEffect(() => {
-    // In a real implementation, you'd get this from the socket connection
-    // For now, we'll use a simple approach
-    if (connected && !currentPlayerId) {
-      setCurrentPlayerId(Math.random().toString(36).substring(7));
-    }
-  }, [connected, currentPlayerId]);
 
   // Switch to room view when room is available
   useEffect(() => {
@@ -44,12 +36,12 @@ function App() {
     }
   }, [room]);
 
-  const handleCreateRoom = (nickname: string, settings: Partial<RoomSettings>) => {
-    createRoom(nickname, settings);
+  const handleCreateRoom = (nickname: string, profileIcon: string, settings: Partial<RoomSettings>) => {
+    createRoom(nickname, profileIcon, settings);
   };
 
-  const handleJoinRoom = (roomId: string, nickname: string) => {
-    joinRoom(roomId, nickname);
+  const handleJoinRoom = (roomId: string, nickname: string, profileIcon: string) => {
+    joinRoom(roomId, nickname, profileIcon);
   };
 
   const handleLeaveRoom = () => {
@@ -100,7 +92,7 @@ function App() {
           onCastVote={castVote}
           onStartVoting={startVoting}
           onKickPlayer={kickPlayer}
-          currentPlayerId={currentPlayerId}
+          currentPlayerId={socketId}
         />
       )}
     </div>

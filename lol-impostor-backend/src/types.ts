@@ -1,9 +1,11 @@
 export interface Player {
   id: string;
   nickname: string;
+  profileIcon: string; // Icon filename (e.g., "5.png")
   isHost: boolean;
   isImpostor: boolean;
   isConnected: boolean;
+  isEliminated: boolean; // New field for spectator mode
   joinedAt: Date;
   lastSeen: Date;
 }

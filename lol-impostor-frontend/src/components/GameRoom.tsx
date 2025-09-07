@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Room, GameData, Message } from '../types';
 import { getChampionImageUrl, FALLBACK_CHAMPION_IMAGE } from '../utils/champions';
+import { getProfileIconUrl } from '../utils/profileIcons';
 
 interface GameRoomProps {
   room: Room;
@@ -38,6 +39,8 @@ export const GameRoom = ({
   const currentPlayer = room.players.find(p => p.id === currentPlayerId);
   const isHost = currentPlayer?.isHost || false;
   const connectedPlayers = room.players.filter(p => p.isConnected);
+  const activePlayers = connectedPlayers.filter(p => !p.isEliminated);
+  const isSpectator = currentPlayer?.isEliminated || false;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -73,9 +76,10 @@ export const GameRoom = ({
     }
   };
 
-  const canStartGame = isHost && room.gameState === 'WAITING' && connectedPlayers.length >= 3;
-  const canVote = room.gameState === 'VOTING' && gameData;
+  const canStartGame = isHost && room.gameState === 'WAITING' && activePlayers.length >= 3;
+  const canVote = room.gameState === 'VOTING' && gameData && !isSpectator;
   const canStartVoting = isHost && room.gameState === 'DISCUSSION';
+  const canChat = room.gameState === 'DISCUSSION' && !isSpectator;
 
   return (
     <div className="container-fluid min-vh-100 bg-dark text-light">
@@ -89,6 +93,10 @@ export const GameRoom = ({
           <small className="text-muted">{getGameStateText()}</small>
         </div>
         <div className="col-md-6 text-end">
+          {/* Debug Info - Remove in production */}
+          <small className="text-muted me-3">
+            Debug: PlayerId={currentPlayerId?.substring(0,8)}... | GameState={room.gameState} | Messages={messages.length}
+          </small>
           <div className="btn-group">
             <button 
               className="btn btn-outline-info btn-sm"
@@ -177,8 +185,18 @@ export const GameRoom = ({
       <div className="row mt-3">
         {/* Left Panel - Players & Champion Info */}
         <div className="col-md-4">
+          {/* Spectator Mode Alert */}
+          {isSpectator && (
+            <div className="alert alert-info mb-3">
+              <h6 className="alert-heading">
+                <i className="bi bi-eye"></i> Modo Espectador
+              </h6>
+              <p className="mb-0">Has sido eliminado. Puedes seguir viendo el juego pero no puedes participar.</p>
+            </div>
+          )}
+
           {/* Champion Info */}
-          {gameData && (
+          {gameData && !isSpectator && (
             <div className="card bg-secondary mb-3">
               <div className="card-body text-center">
                 {gameData.isImpostor ? (
@@ -217,13 +235,26 @@ export const GameRoom = ({
             <div className="card-body">
               {connectedPlayers.map(player => (
                 <div key={player.id} className="d-flex justify-content-between align-items-center mb-2">
-                  <div>
-                    <span className={`badge me-2 ${player.id === currentPlayerId ? 'bg-primary' : 'bg-secondary'}`}>
-                      {player.nickname}
-                    </span>
-                    {player.isHost && <i className="bi bi-star-fill text-warning"></i>}
+                  <div className="d-flex align-items-center">
+                    <img 
+                      src={getProfileIconUrl(player.profileIcon || '0.png')}
+                      alt={`${player.nickname} icon`}
+                      className="rounded-circle me-2"
+                      style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                    />
+                    <div>
+                      <span className={`badge me-2 ${player.id === currentPlayerId ? 'bg-primary' : 'bg-secondary'}`}>
+                        {player.nickname}
+                      </span>
+                      {player.isHost && <i className="bi bi-star-fill text-warning"></i>}
+                      {player.isEliminated && (
+                        <span className="badge bg-danger ms-1">
+                          <i className="bi bi-eye"></i> Espectador
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {isHost && player.id !== currentPlayerId && (
+                  {isHost && player.id !== currentPlayerId && !player.isEliminated && (
                     <button 
                       className="btn btn-outline-danger btn-sm"
                       onClick={() => onKickPlayer(player.id)}
@@ -262,19 +293,30 @@ export const GameRoom = ({
             </div>
             <div className="card-body p-0 d-flex flex-column" style={{ height: '400px' }}>
               <div className="flex-grow-1 overflow-auto p-3">
-                {messages.map(msg => (
-                  <div key={msg.id} className="mb-2">
-                    <strong className="text-warning">{msg.playerNickname}:</strong>
-                    <span className="ms-2">{msg.content}</span>
-                    <small className="text-muted ms-2">
-                      {new Date(msg.timestamp).toLocaleTimeString()}
-                    </small>
+                {messages.length === 0 ? (
+                  <div className="text-muted text-center p-3">
+                    {room.gameState === 'DISCUSSION' 
+                      ? '¡Empieza a dar pistas sobre tu campeón!' 
+                      : 'Los mensajes aparecerán aquí durante la discusión'
+                    }
                   </div>
-                ))}
+                ) : (
+                  messages.map(msg => (
+                    <div key={msg.id} className="mb-2">
+                      <strong className={msg.type === 'system' ? 'text-info' : 'text-warning'}>
+                        {msg.playerNickname}{msg.type === 'chat' ? ':' : ''}
+                      </strong>
+                      <span className="ms-2">{msg.content}</span>
+                      <small className="text-muted ms-2">
+                        {new Date(msg.timestamp).toLocaleTimeString()}
+                      </small>
+                    </div>
+                  ))
+                )}
                 <div ref={messagesEndRef} />
               </div>
               
-              {room.gameState === 'DISCUSSION' && (
+              {canChat && (
                 <form onSubmit={handleSendMessage} className="p-3 border-top">
                   <div className="input-group">
                     <input
@@ -303,7 +345,7 @@ export const GameRoom = ({
                 <h6 className="mb-0">Votar para Expulsar</h6>
               </div>
               <div className="card-body">
-                {connectedPlayers.map(player => (
+                {activePlayers.map(player => (
                   <button
                     key={player.id}
                     className={`btn w-100 mb-2 ${
@@ -312,16 +354,25 @@ export const GameRoom = ({
                         : 'btn-outline-danger'
                     }`}
                     onClick={() => handleVote(player.id)}
-                    disabled={selectedVote !== ''}
+                    disabled={selectedVote !== '' || player.id === currentPlayerId}
                   >
-                    {player.nickname}
-                    {player.isHost && <i className="bi bi-star-fill ms-2"></i>}
+                    <div className="d-flex align-items-center justify-content-center">
+                      <img 
+                        src={getProfileIconUrl(player.profileIcon || '0.png')}
+                        alt={`${player.nickname} icon`}
+                        className="rounded-circle me-2"
+                        style={{ width: '24px', height: '24px', objectFit: 'cover' }}
+                      />
+                      {player.nickname}
+                      {player.isHost && <i className="bi bi-star-fill ms-2"></i>}
+                      {player.id === currentPlayerId && <span className="ms-2 text-muted">(Tú)</span>}
+                    </div>
                   </button>
                 ))}
                 
                 {selectedVote && (
                   <div className="alert alert-info mt-3">
-                    <small>Votaste por expulsar a: <strong>{connectedPlayers.find(p => p.id === selectedVote)?.nickname}</strong></small>
+                    <small>Votaste por expulsar a: <strong>{activePlayers.find(p => p.id === selectedVote)?.nickname}</strong></small>
                   </div>
                 )}
               </div>
@@ -329,6 +380,30 @@ export const GameRoom = ({
           )}
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="container-fluid border-top border-secondary mt-4 py-3">
+        <div className="row text-center">
+          <div className="col-md-6 text-md-start mb-2 mb-md-0">
+            <small className="text-muted">
+              <i className="bi bi-tag"></i> LoL Impostor v1.0
+            </small>
+          </div>
+          <div className="col-md-6 text-md-end">
+            <small className="text-muted">
+              by{' '}
+              <a 
+                href="https://github.com/FrancoMal" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-decoration-none text-warning"
+              >
+                <i className="bi bi-github"></i> FrancoMal
+              </a>
+            </small>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

@@ -54,7 +54,8 @@ io.on('connection', (socket) => {
       }
 
       const nickname = settings.nickname || 'Host';
-      const room = roomManager.createRoom(playerId, nickname, settings);
+      const profileIcon = settings.profileIcon || '0.png';
+      const room = roomManager.createRoom(playerId, nickname, profileIcon, settings);
       currentRoomId = room.id;
       
       socket.join(room.id);
@@ -70,14 +71,14 @@ io.on('connection', (socket) => {
   // Join room
   socket.on('join-room', (data) => {
     try {
-      const { roomId, nickname } = data;
+      const { roomId, nickname, profileIcon } = data;
       
       if (currentRoomId) {
         socket.emit('error', 'Already in a room');
         return;
       }
 
-      const room = roomManager.joinRoom(roomId, playerId, nickname);
+      const room = roomManager.joinRoom(roomId, playerId, nickname, profileIcon || '0.png');
       if (!room) {
         socket.emit('error', 'Room not found or full');
         return;
