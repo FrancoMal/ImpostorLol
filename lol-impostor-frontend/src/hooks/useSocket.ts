@@ -15,7 +15,7 @@ export const useSocket = () => {
     // Connect to server
     const serverUrl = import.meta.env.VITE_API_URL || 
       (import.meta.env.PROD 
-        ? 'impostorlol-production.up.railway.app'  // Replace with your Railway URL
+        ? 'https://impostorlol-production.up.railway.app'  // Replace with your Railway URL
         : 'http://localhost:3001');
 
     socketRef.current = io(serverUrl);
