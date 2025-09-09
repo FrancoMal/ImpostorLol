@@ -122,6 +122,10 @@ export const GameRoom = ({
     setShowNewGameModal(false);
   };
 
+  const closeVictoryModal = () => {
+    setShowVictoryModal(false);
+  };
+
   const getGameStateText = () => {
     switch (room.gameState) {
       case 'WAITING': return 'Esperando jugadores...';
@@ -451,6 +455,12 @@ export const GameRoom = ({
                 <h5 className="modal-title text-warning">
                   <i className="bi bi-trophy-fill"></i> ¡Partida Terminada!
                 </h5>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={closeVictoryModal}
+                  aria-label="Cerrar"
+                ></button>
               </div>
               <div className="modal-body text-center">
                 <div className={`alert ${victoryData.winner === 'innocents' ? 'alert-success' : 'alert-danger'} mb-4`}>
