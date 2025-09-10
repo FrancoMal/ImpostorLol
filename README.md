@@ -1,6 +1,8 @@
 # 🎮 LoL Impostor
 
-Un juego de impostor inspirado en Among Us pero con campeones de League of Legends. Los jugadores deben dar pistas sobre su campeón asignado para identificar y expulsar al impostor.
+https://impostor-lol.vercel.app/
+
+Un juego de impostor con campeones de League of Legends. Los jugadores deben dar pistas sobre su campeón asignado para identificar y expulsar al impostor.
 
 ## 🚀 Características
 
