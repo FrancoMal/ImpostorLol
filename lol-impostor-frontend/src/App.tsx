@@ -16,7 +16,6 @@ function App() {
     error,
     socketId,
     votingCountdown,
-    votingReadyToFinalize,
     voteSelectionsCount,
     createRoom,
     joinRoom,
@@ -103,7 +102,6 @@ function App() {
             onResetGame={resetGame}
             currentPlayerId={socketId}
             votingCountdown={votingCountdown}
-            votingReadyToFinalize={votingReadyToFinalize}
             voteSelectionsCount={voteSelectionsCount}
           />
         )}

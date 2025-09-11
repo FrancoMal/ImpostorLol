@@ -12,7 +12,6 @@ export const useSocket = () => {
   const [error, setError] = useState<string | null>(null);
   const [socketId, setSocketId] = useState<string>('');  
   const [votingCountdown, setVotingCountdown] = useState<number>(0);
-  const [votingReadyToFinalize, setVotingReadyToFinalize] = useState<boolean>(false);
   const [voteSelectionsCount, setVoteSelectionsCount] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
 
   useEffect(() => {
@@ -61,9 +60,6 @@ export const useSocket = () => {
       setVoteSelectionsCount({ current: data.selectionsCount, total: data.totalPlayers });
     });
 
-    socket.on('voting-ready-to-finalize', (readyToFinalize) => {
-      setVotingReadyToFinalize(readyToFinalize);
-    });
 
     socket.on('voting-countdown', (countdown) => {
       setVotingCountdown(countdown);
@@ -126,7 +122,6 @@ export const useSocket = () => {
       setGameData(null);
       setMessages([]);
       setVotingCountdown(0);
-      setVotingReadyToFinalize(false);
       setVoteSelectionsCount({ current: 0, total: 0 });
     }
   };
@@ -191,7 +186,6 @@ export const useSocket = () => {
     error,
     socketId,
     votingCountdown,
-    votingReadyToFinalize,
     voteSelectionsCount,
     createRoom,
     joinRoom,

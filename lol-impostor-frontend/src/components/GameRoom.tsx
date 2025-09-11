@@ -20,7 +20,6 @@ interface GameRoomProps {
   onResetGame: () => void;
   currentPlayerId: string;
   votingCountdown: number;
-  votingReadyToFinalize: boolean;
   voteSelectionsCount: { current: number; total: number };
 }
 
@@ -39,7 +38,6 @@ export const GameRoom = ({
   onResetGame,
   currentPlayerId,
   votingCountdown,
-  votingReadyToFinalize,
   voteSelectionsCount
 }: GameRoomProps) => {
   const [message, setMessage] = useState('');

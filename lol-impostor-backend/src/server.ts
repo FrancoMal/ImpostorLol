@@ -266,31 +266,33 @@ io.on('connection', (socket) => {
       }
 
       const room = roomManager.getRoom(currentRoomId);
-      if (room) {
+      if (room && currentRoomId) {
         // Start countdown
         let countdown = 3;
         io.to(currentRoomId).emit('voting-countdown', countdown);
         
         const countdownInterval = setInterval(() => {
           countdown--;
-          if (countdown > 0) {
+          if (countdown > 0 && currentRoomId) {
             io.to(currentRoomId).emit('voting-countdown', countdown);
           } else {
             clearInterval(countdownInterval);
             
             // Process votes after countdown
-            const votingResult = roomManager.processVotes(currentRoomId);
-            if (votingResult) {
-              io.to(currentRoomId).emit('voting-results', votingResult);
-              io.to(currentRoomId).emit('room-updated', room);
-              
-              // Check if game ended
-              if (room.gameState === 'FINISHED') {
-                const remainingImpostors = room.players.filter(p => p.isImpostor && p.isConnected && !p.isEliminated);
-                const winner = remainingImpostors.length === 0 ? 'innocents' : 'impostors';
-                const reason = remainingImpostors.length === 0 ? 'All impostors eliminated' : 'Impostors equal or outnumber innocents';
+            if (currentRoomId) {
+              const votingResult = roomManager.processVotes(currentRoomId);
+              if (votingResult) {
+                io.to(currentRoomId).emit('voting-results', votingResult);
+                io.to(currentRoomId).emit('room-updated', room);
                 
-                io.to(currentRoomId).emit('game-ended', { winner, reason });
+                // Check if game ended
+                if (room.gameState === 'FINISHED') {
+                  const remainingImpostors = room.players.filter(p => p.isImpostor && p.isConnected && !p.isEliminated);
+                  const winner = remainingImpostors.length === 0 ? 'innocents' : 'impostors';
+                  const reason = remainingImpostors.length === 0 ? 'All impostors eliminated' : 'Impostors equal or outnumber innocents';
+                  
+                  io.to(currentRoomId).emit('game-ended', { winner, reason });
+                }
               }
             }
           }
