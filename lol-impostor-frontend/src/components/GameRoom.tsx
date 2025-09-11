@@ -13,11 +13,15 @@ interface GameRoomProps {
   onStartGame: () => void;
   onUpdateSettings: (settings: any) => void;
   onSendMessage: (message: string) => void;
-  onCastVote: (targetId: string) => void;
+  onSelectVote: (targetId: string | null) => void;
+  onFinalizeVoting: () => void;
   onStartVoting: () => void;
   onKickPlayer: (playerId: string) => void;
   onResetGame: () => void;
   currentPlayerId: string;
+  votingCountdown: number;
+  votingReadyToFinalize: boolean;
+  voteSelectionsCount: { current: number; total: number };
 }
 
 export const GameRoom = ({ 
@@ -28,11 +32,15 @@ export const GameRoom = ({
   onStartGame, 
   onUpdateSettings,
   onSendMessage,
-  onCastVote,
+  onSelectVote,
+  onFinalizeVoting,
   onStartVoting,
   onKickPlayer,
   onResetGame,
-  currentPlayerId
+  currentPlayerId,
+  votingCountdown,
+  votingReadyToFinalize,
+  voteSelectionsCount
 }: GameRoomProps) => {
   const [message, setMessage] = useState('');
   const [selectedVote, setSelectedVote] = useState('');
@@ -55,7 +63,7 @@ export const GameRoom = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Handle game end
+  // Handle game state changes and reset vote selection when appropriate
   useEffect(() => {
     if (room.gameState === 'FINISHED') {
       // Simulate game-ended event data
@@ -68,6 +76,11 @@ export const GameRoom = ({
       setVictoryData({ winner, reason });
       setShowVictoryModal(true);
     }
+    
+    // Clear vote selection when game state changes to non-voting states
+    if (room.gameState === 'WAITING' || room.gameState === 'STARTING' || room.gameState === 'DISCUSSION') {
+      setSelectedVote('');
+    }
   }, [room.gameState, activePlayers]);
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -79,8 +92,15 @@ export const GameRoom = ({
   };
 
   const handleVote = (targetId: string) => {
-    setSelectedVote(targetId);
-    onCastVote(targetId);
+    if (selectedVote === targetId) {
+      // Deselect if clicking the same vote
+      setSelectedVote('');
+      onSelectVote(null);
+    } else {
+      // Select new vote
+      setSelectedVote(targetId);
+      onSelectVote(targetId);
+    }
   };
 
   const handleUpdateSettings = () => {
@@ -104,7 +124,7 @@ export const GameRoom = ({
           // Reset game states
           setShowVictoryModal(false);
           setVictoryData(null);
-          setSelectedVote('');
+          setSelectedVote(''); // Clear vote selection
           // Reset and start new game
           onResetGame();
           // After a small delay, start the new game
@@ -132,6 +152,7 @@ export const GameRoom = ({
       case 'STARTING': return 'Iniciando partida...';
       case 'DISCUSSION': return 'Tiempo de discusión';
       case 'VOTING': return 'Votación en curso';
+      case 'VOTING_COUNTDOWN': return 'Revelando votos';
       case 'REVEAL': return 'Revelando resultados';
       case 'FINISHED': return 'Partida terminada';
       default: return room.gameState;
@@ -141,6 +162,7 @@ export const GameRoom = ({
   const canStartGame = isHost && room.gameState === 'WAITING' && activePlayers.length >= 3;
   const canVote = room.gameState === 'VOTING' && gameData && !isSpectator;
   const canStartVoting = isHost && room.gameState === 'DISCUSSION';
+  const canFinalizeVoting = isHost && room.gameState === 'VOTING' && voteSelectionsCount.current > 0;
   const canChat = room.gameState === 'DISCUSSION' && !isSpectator;
 
   return (
@@ -152,14 +174,14 @@ export const GameRoom = ({
             <i className="bi bi-door-open me-2"></i>
             Sala: <span className="text-warning">{room.id}</span>
           </h4>
-          <small className="text-muted">{getGameStateText()}</small>
+          <small className={`${isLight ? 'text-muted' : 'text-light opacity-75'}`}>{getGameStateText()}</small>
         </div>
         <div className="col-md-4 text-center">
           <ThemeToggle />
         </div>
         <div className="col-md-4 text-end">
           {/* Debug Info - Remove in production */}
-          <small className="text-muted me-3 d-none d-lg-inline">
+          <small className={`${isLight ? 'text-muted' : 'text-light opacity-75'} me-3 d-none d-lg-inline`}>
             Debug: PlayerId={currentPlayerId?.substring(0,8)}... | GameState={room.gameState} | Messages={messages.length}
           </small>
           <div className="btn-group">
@@ -269,7 +291,7 @@ export const GameRoom = ({
                     <h5 className="text-danger">
                       <i className="bi bi-exclamation-triangle"></i> ERES EL IMPOSTOR
                     </h5>
-                    <p className="text-muted">¡Oculta tu identidad!</p>
+                    <p className={`${isLight ? 'text-muted' : 'text-light opacity-75'}`}>¡Oculta tu identidad!</p>
                   </div>
                 ) : (
                   <div>
@@ -283,7 +305,7 @@ export const GameRoom = ({
                       }}
                     />
                     <h6 className="text-success">{gameData.champion}</h6>
-                    <small className="text-muted">Da pistas sobre este campeón</small>
+                    <small className={`${isLight ? 'text-muted' : 'text-light opacity-75'}`}>Da pistas sobre este campeón</small>
                   </div>
                 )}
               </div>
@@ -348,6 +370,27 @@ export const GameRoom = ({
               </button>
             </div>
           )}
+
+          {canFinalizeVoting && (
+            <div className="mt-3">
+              <div className="card bg-info text-dark mb-2">
+                <div className="card-body p-2 text-center">
+                  <small>
+                    <i className="bi bi-people"></i> {voteSelectionsCount.current}/{voteSelectionsCount.total} han seleccionado
+                  </small>
+                </div>
+              </div>
+              <div className="d-grid">
+                <button 
+                  className="btn btn-danger" 
+                  onClick={onFinalizeVoting}
+                  disabled={voteSelectionsCount.current === 0}
+                >
+                  <i className="bi bi-check-circle"></i> Finalizar Votación
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Center Panel - Chat */}
@@ -359,7 +402,7 @@ export const GameRoom = ({
             <div className="card-body p-0 d-flex flex-column" style={{ height: '400px' }}>
               <div className="flex-grow-1 overflow-auto p-3">
                 {messages.length === 0 ? (
-                  <div className="text-muted text-center p-3">
+                  <div className={`${isLight ? 'text-muted' : 'text-light opacity-75'} text-center p-3`}>
                     {room.gameState === 'DISCUSSION' 
                       ? '¡Empieza a dar pistas sobre tu campeón!' 
                       : 'Los mensajes aparecerán aquí durante la discusión'
@@ -372,7 +415,7 @@ export const GameRoom = ({
                         {msg.playerNickname}{msg.type === 'chat' ? ':' : ''}
                       </strong>
                       <span className="ms-2">{msg.content}</span>
-                      <small className="text-muted ms-2">
+                      <small className={`${isLight ? 'text-muted' : 'text-light opacity-75'} ms-2`}>
                         {new Date(msg.timestamp).toLocaleTimeString()}
                       </small>
                     </div>
@@ -419,7 +462,7 @@ export const GameRoom = ({
                         : 'btn-outline-danger'
                     }`}
                     onClick={() => handleVote(player.id)}
-                    disabled={selectedVote !== '' || player.id === currentPlayerId}
+                    disabled={player.id === currentPlayerId || room.gameState !== 'VOTING'}
                   >
                     <div className="d-flex align-items-center justify-content-center">
                       <img 
@@ -430,14 +473,26 @@ export const GameRoom = ({
                       />
                       {player.nickname}
                       {player.isHost && <i className="bi bi-star-fill ms-2"></i>}
-                      {player.id === currentPlayerId && <span className="ms-2 text-muted">(Tú)</span>}
+                      {player.id === currentPlayerId && <span className={`ms-2 ${isLight ? 'text-muted' : 'text-light opacity-75'}`}>(Tú)</span>}
                     </div>
                   </button>
                 ))}
                 
                 {selectedVote && (
-                  <div className="alert alert-info mt-3">
-                    <small>Votaste por expulsar a: <strong>{activePlayers.find(p => p.id === selectedVote)?.nickname}</strong></small>
+                  <div className="alert alert-warning mt-3">
+                    <small>
+                      <i className="bi bi-hand-index"></i> Seleccionaste: <strong>{activePlayers.find(p => p.id === selectedVote)?.nickname}</strong>
+                      <br />
+                      <em>Puedes cambiar tu selección hasta que el host finalice la votación</em>
+                    </small>
+                  </div>
+                )}
+
+                {room.gameState === 'VOTING' && !selectedVote && (
+                  <div className="alert alert-secondary mt-3">
+                    <small>
+                      <i className="bi bi-info-circle"></i> Selecciona a quién votar. Puedes cambiar tu selección.
+                    </small>
                   </div>
                 )}
               </div>
@@ -547,7 +602,7 @@ export const GameRoom = ({
               </div>
               <div className="modal-body text-center">
                 <p className={isLight ? 'text-dark' : 'text-light'}>¿Empezar una nueva partida?</p>
-                <p className="text-muted">Se asignará un nuevo campeón e impostores aleatorios</p>
+                <p className={`${isLight ? 'text-muted' : 'text-light opacity-75'}`}>Se asignará un nuevo campeón e impostores aleatorios</p>
               </div>
               <div className={`modal-footer ${isLight ? 'border-secondary' : 'border-secondary'}`}>
                 <button className="btn btn-secondary" onClick={cancelNewGame}>
@@ -576,16 +631,32 @@ export const GameRoom = ({
         </div>
       )}
 
+      {/* Voting Countdown Modal */}
+      {votingCountdown > 0 && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className={`modal-content ${isLight ? 'bg-white' : 'bg-dark'}`}>
+              <div className="modal-body text-center py-5">
+                <h1 className="display-1 text-danger mb-3">{votingCountdown}</h1>
+                <p className={isLight ? 'text-dark' : 'text-light'}>
+                  <i className="bi bi-hourglass-split"></i> Revelando resultados de la votación...
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <footer className={`container-fluid border-top ${isLight ? 'border-dark' : 'border-secondary'} mt-4 py-3`}>
         <div className="row text-center">
           <div className="col-md-6 text-md-start mb-2 mb-md-0">
-            <small className="text-muted">
-              <i className="bi bi-tag"></i> LoL Impostor v1.1
+            <small className={`${isLight ? 'text-muted' : 'text-light opacity-75'}`}>
+              <i className="bi bi-tag"></i> LoL Impostor v1.2
             </small>
           </div>
           <div className="col-md-6 text-md-end">
-            <small className="text-muted">
+            <small className={`${isLight ? 'text-muted' : 'text-light opacity-75'}`}>
               by{' '}
               <a 
                 href="https://github.com/FrancoMal" 

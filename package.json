@@ -1,6 +1,6 @@
 {
   "name": "lol-impostor",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Impostor game with League of Legends champions",
   "main": "index.js",
   "scripts": {

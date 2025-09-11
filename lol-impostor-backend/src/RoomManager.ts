@@ -37,6 +37,7 @@ export class RoomManager {
       gameState: 'WAITING',
       messages: [],
       votes: [],
+      voteSelections: {},
       votingRound: 0,
       createdAt: new Date(),
       lastActivity: new Date()
@@ -165,6 +166,7 @@ export class RoomManager {
     // Reset game state
     room.gameState = 'STARTING';
     room.votes = [];
+    room.voteSelections = {};
     room.votingRound = 0;
 
     // Randomly assign impostors
@@ -218,8 +220,96 @@ export class RoomManager {
     room.gameState = 'VOTING';
     room.votingRound++;
     room.votes = room.votes.filter(v => v.round < room.votingRound); // Clear current round votes
+    room.voteSelections = {}; // Clear vote selections
     room.lastActivity = new Date();
     return true;
+  }
+
+  selectVote(roomId: string, playerId: string, targetId: string | null): { success: boolean; selectionsCount: number; totalPlayers: number; readyToFinalize: boolean } {
+    const room = this.rooms.get(roomId);
+    if (!room || room.gameState !== 'VOTING') {
+      return { success: false, selectionsCount: 0, totalPlayers: 0, readyToFinalize: false };
+    }
+
+    const voter = room.players.find(p => p.id === playerId && p.isConnected && !p.isEliminated);
+    if (!voter) {
+      return { success: false, selectionsCount: 0, totalPlayers: 0, readyToFinalize: false };
+    }
+
+    // If targetId is provided, validate the target
+    if (targetId) {
+      const target = room.players.find(p => p.id === targetId && p.isConnected && !p.isEliminated);
+      if (!target) {
+        return { success: false, selectionsCount: 0, totalPlayers: 0, readyToFinalize: false };
+      }
+      
+      // Prevent self-voting
+      if (playerId === targetId) {
+        return { success: false, selectionsCount: 0, totalPlayers: 0, readyToFinalize: false };
+      }
+    }
+
+    // Update vote selection (null means clearing selection)
+    if (targetId) {
+      room.voteSelections[playerId] = targetId;
+    } else {
+      delete room.voteSelections[playerId];
+    }
+
+    room.lastActivity = new Date();
+
+    // Check if all players have made a selection
+    const activePlayers = room.players.filter(p => p.isConnected && !p.isEliminated);
+    const selectionsCount = Object.keys(room.voteSelections).length;
+    const readyToFinalize = selectionsCount === activePlayers.length;
+
+    return {
+      success: true,
+      selectionsCount,
+      totalPlayers: activePlayers.length,
+      readyToFinalize
+    };
+  }
+
+  finalizeVoting(roomId: string, hostId: string): { success: boolean; error?: string } {
+    const room = this.rooms.get(roomId);
+    if (!room || room.hostId !== hostId) {
+      return { success: false, error: 'Room not found or not host' };
+    }
+
+    if (room.gameState !== 'VOTING') {
+      return { success: false, error: 'Not in voting phase' };
+    }
+
+    const activePlayers = room.players.filter(p => p.isConnected && !p.isEliminated);
+    const selectionsCount = Object.keys(room.voteSelections).length;
+
+    // Require at least some votes to finalize
+    if (selectionsCount === 0) {
+      return { success: false, error: 'No votes have been selected' };
+    }
+
+    // Convert vote selections to actual votes
+    room.votes = room.votes.filter(v => v.round < room.votingRound); // Clear current round votes
+    
+    Object.entries(room.voteSelections).forEach(([playerId, targetId]) => {
+      const vote: Vote = {
+        playerId,
+        targetId,
+        round: room.votingRound,
+        timestamp: new Date()
+      };
+      room.votes.push(vote);
+    });
+
+    // Clear vote selections after converting to votes
+    room.voteSelections = {};
+
+    // Move to countdown state
+    room.gameState = 'VOTING_COUNTDOWN';
+    room.lastActivity = new Date();
+
+    return { success: true };
   }
 
   castVote(roomId: string, playerId: string, targetId: string): boolean {
@@ -251,7 +341,7 @@ export class RoomManager {
 
   processVotes(roomId: string): VotingResult | null {
     const room = this.rooms.get(roomId);
-    if (!room || room.gameState !== 'VOTING') return null;
+    if (!room || room.gameState !== 'VOTING_COUNTDOWN') return null;
 
     const currentVotes = room.votes.filter(v => v.round === room.votingRound);
     const activePlayers = room.players.filter(p => p.isConnected && !p.isEliminated);
@@ -363,6 +453,7 @@ export class RoomManager {
     room.gameState = 'WAITING';
     room.champion = undefined;
     room.votes = [];
+    room.voteSelections = {};
     room.votingRound = 0;
     room.messages = [];
     room.lastActivity = new Date();

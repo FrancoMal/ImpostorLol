@@ -44,12 +44,13 @@ export interface RoomSettings {
 }
 
 export type GameState = 
-  | 'WAITING'    // Waiting for players to join
-  | 'STARTING'   // Game is starting, assigning roles
-  | 'DISCUSSION' // Players discussing and giving hints
-  | 'VOTING'     // Voting phase
-  | 'REVEAL'     // Showing voting results
-  | 'FINISHED';  // Game over
+  | 'WAITING'           // Waiting for players to join
+  | 'STARTING'          // Game is starting, assigning roles
+  | 'DISCUSSION'        // Players discussing and giving hints
+  | 'VOTING'            // Vote selection phase
+  | 'VOTING_COUNTDOWN'  // Countdown before revealing results
+  | 'REVEAL'            // Showing voting results
+  | 'FINISHED';         // Game over
 
 export interface Room {
   id: string;
@@ -60,6 +61,7 @@ export interface Room {
   champion?: string; // The champion assigned to non-impostors
   messages: Message[];
   votes: Vote[];
+  voteSelections: { [playerId: string]: string }; // Temporary vote selections
   votingRound: number;
   createdAt: Date;
   lastActivity: Date;
@@ -80,7 +82,8 @@ export interface GameEvents {
   'send-message': (content: string) => void;
   
   // Voting
-  'cast-vote': (targetId: string) => void;
+  'select-vote': (targetId: string) => void;
+  'finalize-voting': () => void;
   
   // Client events (server to client)
   'room-created': (data: { roomId: string; room: Room }) => void;
@@ -92,7 +95,9 @@ export interface GameEvents {
   'game-started': (data: { champion: string; isImpostor: boolean }) => void;
   'message-received': (message: Message) => void;
   'voting-started': () => void;
-  'vote-cast': (playerId: string) => void;
+  'vote-selection-updated': (data: { playerId: string; targetId: string | null; selectionsCount: number; totalPlayers: number }) => void;
+  'voting-ready-to-finalize': (readyToFinalize: boolean) => void;
+  'voting-countdown': (countdown: number) => void;
   'voting-results': (result: VotingResult) => void;
   'game-ended': (data: { winner: 'impostors' | 'innocents'; reason: string }) => void;
   'error': (error: string) => void;

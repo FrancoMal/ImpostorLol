@@ -317,7 +317,7 @@ export const HomePage = ({ onCreateRoom, onJoinRoom, connected }: HomePageProps)
           </div>
 
           <div className="text-center mt-4">
-            <small className="text-muted">
+            <small className={`${isLight ? 'text-muted' : 'text-light opacity-75'}`}>
               <i className="bi bi-controller"></i> ¡Buena suerte detective!
             </small>
           </div>
@@ -326,12 +326,12 @@ export const HomePage = ({ onCreateRoom, onJoinRoom, connected }: HomePageProps)
           <footer className={`text-center mt-4 py-3 border-top ${isLight ? 'border-secondary' : 'border-secondary'}`}>
             <div className="row">
               <div className="col-md-6 text-md-start text-center mb-2 mb-md-0">
-                <small className="text-muted">
-                  <i className="bi bi-tag"></i> Versión 1.1
+                <small className={`${isLight ? 'text-muted' : 'text-light opacity-75'}`}>
+                  <i className="bi bi-tag"></i> Versión 1.2
                 </small>
               </div>
               <div className="col-md-6 text-md-end text-center">
-                <small className="text-muted">
+                <small className={`${isLight ? 'text-muted' : 'text-light opacity-75'}`}>
                   Desarrollado por{' '}
                   <a 
                     href="https://github.com/FrancoMal" 

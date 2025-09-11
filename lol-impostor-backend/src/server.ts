@@ -220,50 +220,86 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Cast vote
-  socket.on('cast-vote', (targetId) => {
+  // Select vote (temporary selection)
+  socket.on('select-vote', (targetId) => {
     try {
       if (!currentRoomId) {
         socket.emit('error', 'Not in a room');
         return;
       }
 
-      const success = roomManager.castVote(currentRoomId, playerId, targetId);
-      if (!success) {
-        socket.emit('error', 'Failed to cast vote');
+      const result = roomManager.selectVote(currentRoomId, playerId, targetId);
+      if (!result.success) {
+        socket.emit('error', 'Failed to select vote');
         return;
       }
 
-      // Notify room that a vote was cast (without revealing who voted for whom)
-      io.to(currentRoomId).emit('vote-cast', playerId);
-      
+      // Notify room about vote selection update
+      io.to(currentRoomId).emit('vote-selection-updated', {
+        playerId,
+        targetId,
+        selectionsCount: result.selectionsCount,
+        totalPlayers: result.totalPlayers
+      });
+
+      // Notify if voting is ready to finalize
+      io.to(currentRoomId).emit('voting-ready-to-finalize', result.readyToFinalize);
+
+    } catch (error) {
+      console.error('Error selecting vote:', error);
+      socket.emit('error', 'Failed to select vote');
+    }
+  });
+
+  // Finalize voting (host only)
+  socket.on('finalize-voting', () => {
+    try {
+      if (!currentRoomId) {
+        socket.emit('error', 'Not in a room');
+        return;
+      }
+
+      const result = roomManager.finalizeVoting(currentRoomId, playerId);
+      if (!result.success) {
+        socket.emit('error', result.error || 'Failed to finalize voting');
+        return;
+      }
+
       const room = roomManager.getRoom(currentRoomId);
       if (room) {
-        const activePlayers = room.players.filter(p => p.isConnected);
-        const currentRoundVotes = room.votes.filter(v => v.round === room.votingRound);
+        // Start countdown
+        let countdown = 3;
+        io.to(currentRoomId).emit('voting-countdown', countdown);
         
-        // Check if all players have voted
-        if (currentRoundVotes.length === activePlayers.length) {
-          // All votes are in, process results
-          const result = roomManager.processVotes(currentRoomId);
-          if (result) {
-            io.to(currentRoomId).emit('voting-results', result);
-            io.to(currentRoomId).emit('room-updated', room);
+        const countdownInterval = setInterval(() => {
+          countdown--;
+          if (countdown > 0) {
+            io.to(currentRoomId).emit('voting-countdown', countdown);
+          } else {
+            clearInterval(countdownInterval);
             
-            // Check if game ended
-            if (room.gameState === 'FINISHED') {
-              const remainingImpostors = room.players.filter(p => p.isImpostor && p.isConnected);
-              const winner = remainingImpostors.length === 0 ? 'innocents' : 'impostors';
-              const reason = remainingImpostors.length === 0 ? 'All impostors eliminated' : 'Impostors equal or outnumber innocents';
+            // Process votes after countdown
+            const votingResult = roomManager.processVotes(currentRoomId);
+            if (votingResult) {
+              io.to(currentRoomId).emit('voting-results', votingResult);
+              io.to(currentRoomId).emit('room-updated', room);
               
-              io.to(currentRoomId).emit('game-ended', { winner, reason });
+              // Check if game ended
+              if (room.gameState === 'FINISHED') {
+                const remainingImpostors = room.players.filter(p => p.isImpostor && p.isConnected && !p.isEliminated);
+                const winner = remainingImpostors.length === 0 ? 'innocents' : 'impostors';
+                const reason = remainingImpostors.length === 0 ? 'All impostors eliminated' : 'Impostors equal or outnumber innocents';
+                
+                io.to(currentRoomId).emit('game-ended', { winner, reason });
+              }
             }
           }
-        }
+        }, 1000);
       }
+
     } catch (error) {
-      console.error('Error casting vote:', error);
-      socket.emit('error', 'Failed to cast vote');
+      console.error('Error finalizing voting:', error);
+      socket.emit('error', 'Failed to finalize voting');
     }
   });
 

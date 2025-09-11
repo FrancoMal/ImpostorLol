@@ -10,7 +10,10 @@ export const useSocket = () => {
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [socketId, setSocketId] = useState<string>('');
+  const [socketId, setSocketId] = useState<string>('');  
+  const [votingCountdown, setVotingCountdown] = useState<number>(0);
+  const [votingReadyToFinalize, setVotingReadyToFinalize] = useState<boolean>(false);
+  const [voteSelectionsCount, setVoteSelectionsCount] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
 
   useEffect(() => {
     // Connect to server
@@ -51,6 +54,19 @@ export const useSocket = () => {
 
     socket.on('room-updated', (roomData) => {
       setRoom(roomData);
+    });
+
+    // New voting events
+    socket.on('vote-selection-updated', (data) => {
+      setVoteSelectionsCount({ current: data.selectionsCount, total: data.totalPlayers });
+    });
+
+    socket.on('voting-ready-to-finalize', (readyToFinalize) => {
+      setVotingReadyToFinalize(readyToFinalize);
+    });
+
+    socket.on('voting-countdown', (countdown) => {
+      setVotingCountdown(countdown);
     });
 
     socket.on('game-started', (data) => {
@@ -109,6 +125,9 @@ export const useSocket = () => {
       setRoom(null);
       setGameData(null);
       setMessages([]);
+      setVotingCountdown(0);
+      setVotingReadyToFinalize(false);
+      setVoteSelectionsCount({ current: 0, total: 0 });
     }
   };
 
@@ -130,9 +149,15 @@ export const useSocket = () => {
     }
   };
 
-  const castVote = (targetId: string) => {
+  const selectVote = (targetId: string | null) => {
     if (socketRef.current) {
-      socketRef.current.emit('cast-vote', targetId);
+      socketRef.current.emit('select-vote', targetId);
+    }
+  };
+
+  const finalizeVoting = () => {
+    if (socketRef.current) {
+      socketRef.current.emit('finalize-voting');
     }
   };
 
@@ -165,13 +190,17 @@ export const useSocket = () => {
     messages,
     error,
     socketId,
+    votingCountdown,
+    votingReadyToFinalize,
+    voteSelectionsCount,
     createRoom,
     joinRoom,
     leaveRoom,
     startGame,
     updateSettings,
     sendMessage,
-    castVote,
+    selectVote,
+    finalizeVoting,
     startVoting,
     kickPlayer,
     resetGame,

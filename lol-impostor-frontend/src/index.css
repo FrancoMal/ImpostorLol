@@ -99,6 +99,13 @@ body {
   color: #94a3b8 !important;
 }
 
+/* Improved dark mode text contrast */
+.theme-dark .text-muted,
+[data-bs-theme="dark"] .text-muted,
+.bg-dark .text-muted {
+  color: #cbd5e1 !important;
+}
+
 .border-secondary {
   border-color: #3b4371 !important;
 }

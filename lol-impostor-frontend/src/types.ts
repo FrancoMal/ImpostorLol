@@ -48,6 +48,7 @@ export type GameState =
   | 'STARTING'
   | 'DISCUSSION'
   | 'VOTING'
+  | 'VOTING_COUNTDOWN'
   | 'REVEAL'
   | 'FINISHED';
 
@@ -60,6 +61,7 @@ export interface Room {
   champion?: string;
   messages: Message[];
   votes: Vote[];
+  voteSelections: { [playerId: string]: string };
   votingRound: number;
   createdAt: Date;
   lastActivity: Date;

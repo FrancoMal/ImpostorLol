@@ -15,13 +15,17 @@ function App() {
     messages,
     error,
     socketId,
+    votingCountdown,
+    votingReadyToFinalize,
+    voteSelectionsCount,
     createRoom,
     joinRoom,
     leaveRoom,
     startGame,
     updateSettings,
     sendMessage,
-    castVote,
+    selectVote,
+    finalizeVoting,
     startVoting,
     kickPlayer,
     resetGame,
@@ -92,11 +96,15 @@ function App() {
             onStartGame={startGame}
             onUpdateSettings={updateSettings}
             onSendMessage={sendMessage}
-            onCastVote={castVote}
+            onSelectVote={selectVote}
+            onFinalizeVoting={finalizeVoting}
             onStartVoting={startVoting}
             onKickPlayer={kickPlayer}
             onResetGame={resetGame}
             currentPlayerId={socketId}
+            votingCountdown={votingCountdown}
+            votingReadyToFinalize={votingReadyToFinalize}
+            voteSelectionsCount={voteSelectionsCount}
           />
         )}
       </div>
