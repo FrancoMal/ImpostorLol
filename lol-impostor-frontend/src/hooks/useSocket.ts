@@ -63,6 +63,13 @@ export const useSocket = () => {
 
     socket.on('voting-countdown', (countdown) => {
       setVotingCountdown(countdown);
+      
+      // Auto-clear countdown after it reaches 0 with a small delay
+      if (countdown === 0) {
+        setTimeout(() => {
+          setVotingCountdown(0);
+        }, 1000);
+      }
     });
 
     socket.on('game-started', (data) => {

@@ -48,6 +48,7 @@ export const GameRoom = ({
   const [victoryData, setVictoryData] = useState<{ winner: string; reason: string } | null>(null);
   const [showNewGameModal, setShowNewGameModal] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [localVotingCountdown, setLocalVotingCountdown] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const currentPlayer = room.players.find(p => p.id === currentPlayerId);
@@ -80,6 +81,22 @@ export const GameRoom = ({
       setSelectedVote('');
     }
   }, [room.gameState, activePlayers]);
+
+  // Sync external voting countdown with local state and auto-clear if stuck
+  useEffect(() => {
+    setLocalVotingCountdown(votingCountdown);
+    
+    if (votingCountdown > 0) {
+      const timeout = setTimeout(() => {
+        if (localVotingCountdown > 0) {
+          // If countdown is still active after 10 seconds, force close
+          setLocalVotingCountdown(0);
+        }
+      }, 10000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [votingCountdown]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -630,15 +647,39 @@ export const GameRoom = ({
       )}
 
       {/* Voting Countdown Modal */}
-      {votingCountdown > 0 && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}>
+      {localVotingCountdown > 0 && (
+        <div 
+          className="modal show d-block" 
+          style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}
+          onClick={() => {
+            // Allow closing if countdown is stuck or taking too long
+            setLocalVotingCountdown(0);
+          }}
+        >
           <div className="modal-dialog modal-dialog-centered">
             <div className={`modal-content ${isLight ? 'bg-white' : 'bg-dark'}`}>
+              <div className="modal-header">
+                <h5 className="modal-title text-warning">
+                  <i className="bi bi-hourglass-split"></i> Revelando Resultados
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLocalVotingCountdown(0);
+                  }}
+                  aria-label="Cerrar"
+                ></button>
+              </div>
               <div className="modal-body text-center py-5">
-                <h1 className="display-1 text-danger mb-3">{votingCountdown}</h1>
+                <h1 className="display-1 text-danger mb-3">{localVotingCountdown}</h1>
                 <p className={isLight ? 'text-dark' : 'text-light'}>
                   <i className="bi bi-hourglass-split"></i> Revelando resultados de la votación...
                 </p>
+                <small className={`${isLight ? 'text-muted' : 'text-light opacity-75'}`}>
+                  Haz clic en el fondo o X para cerrar si se queda bloqueado
+                </small>
               </div>
             </div>
           </div>
